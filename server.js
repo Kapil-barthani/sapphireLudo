@@ -743,10 +743,19 @@ io.on('connection', (socket) => {
 async function startServer() {
   const localIp = getLocalNetworkIp();
 
-  // In cloud environments (Railway, Render, etc.), the cloud proxy already provides valid HTTPS (SSL).
-  // Only run local self-signed HTTPS server when testing on local WiFi/LAN.
-  const isCloudEnv = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.PORT && process.env.NODE_ENV === 'production');
+  // Detect if running on cloud platforms (Railway, Render, etc.)
+  const isCloudEnv = Boolean(
+    process.env.PORT ||
+    process.env.RAILWAY_PROJECT_ID ||
+    process.env.RAILWAY_SERVICE_ID ||
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_ENVIRONMENT_NAME ||
+    process.env.RENDER ||
+    process.env.NODE_ENV === 'production'
+  );
+
   if (!isCloudEnv) {
+    // Local dev only: self-signed certificate for local WiFi mobile mic testing
     try {
       const pems = await selfsigned.generate([
         { name: 'commonName', value: 'LudoKingdom' },
@@ -761,35 +770,38 @@ async function startServer() {
       io.attach(httpsServer);
 
       httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-        console.log(`🔒  HTTPS Server (Voice Chat / Mic enabled for Mobile & LAN):`);
+        console.log(`🔒  Local HTTPS Server (Voice Chat enabled):`);
         console.log(`    👉  Local machine:      https://localhost:${HTTPS_PORT}`);
         console.log(`    👉  Mobile/LAN devices: https://${localIp}:${HTTPS_PORT}`);
-        console.log(`    ℹ️   (Open this on mobile & tap "Advanced -> Proceed" to allow Microphone)\n`);
       });
     } catch (err) {
-      console.warn('⚠️  Could not initialize HTTPS server:', err.message);
+      console.warn('⚠️  Could not initialize local HTTPS server:', err.message);
     }
   }
 
+  // Primary HTTP server (Railway / cloud connects here)
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
     console.log(`🎲  LUDO MULTIPLAYER SERVER IS LIVE!`);
-    console.log(`👉  HTTP Local:          http://localhost:${PORT}`);
-    console.log(`👉  HTTP Mobile/LAN:     http://${localIp}:${PORT}`);
+    console.log(`👉  HTTP Port: ${PORT}`);
     console.log(`======================================================\n`);
   });
 
-  // Cloud compatibility: In case Railway maps domain to port 4001, listen on 4001 as plain HTTP too!
-  if (isCloudEnv && String(PORT) !== '4001') {
-    try {
-      const http4001 = http.createServer(app);
-      io.attach(http4001);
-      http4001.listen(4001, '0.0.0.0', () => {
-        console.log(`👉  Cloud fallback listening on port 4001`);
-      });
-    } catch (e) {
-      console.warn('Port 4001 fallback skipped:', e.message);
-    }
+  // Cloud compatibility: In case Railway domain routes specifically to 4001 or 4000,
+  // ensure plain HTTP listeners exist on both ports so 502 never happens!
+  if (isCloudEnv) {
+    const backupPorts = [4000, 4001].filter(p => String(p) !== String(PORT));
+    backupPorts.forEach(port => {
+      try {
+        const backupServer = http.createServer(app);
+        io.attach(backupServer);
+        backupServer.listen(port, '0.0.0.0', () => {
+          console.log(`👉  Cloud HTTP fallback listening on port ${port}`);
+        });
+      } catch (err) {
+        console.warn(`Could not bind fallback port ${port}:`, err.message);
+      }
+    });
   }
 }
 
