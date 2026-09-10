@@ -778,6 +778,19 @@ async function startServer() {
     console.log(`👉  HTTP Mobile/LAN:     http://${localIp}:${PORT}`);
     console.log(`======================================================\n`);
   });
+
+  // Cloud compatibility: In case Railway maps domain to port 4001, listen on 4001 as plain HTTP too!
+  if (isCloudEnv && String(PORT) !== '4001') {
+    try {
+      const http4001 = http.createServer(app);
+      io.attach(http4001);
+      http4001.listen(4001, '0.0.0.0', () => {
+        console.log(`👉  Cloud fallback listening on port 4001`);
+      });
+    } catch (e) {
+      console.warn('Port 4001 fallback skipped:', e.message);
+    }
+  }
 }
 
 startServer();
