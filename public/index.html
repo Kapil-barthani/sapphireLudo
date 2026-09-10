@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ludo Royale — Premium Multiplayer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Poppins:wght@400;500;600;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Ludo Royale — Full 3D Enhanced Theme */
+    :root {
+      --red-1: #FF6B6B; --red-2: #E8384F; --red-3: #A81F30;
+      --green-1: #5FE39B; --green-2: #22B96B; --green-3: #0E7A45;
+      --yellow-1: #FFE58A; --yellow-2: #F5B930; --yellow-3: #C4820E;
+      --blue-1: #6FB4FF; --blue-2: #3A82F2; --blue-3: #1C4FB8;
+      --cream-1: #FBF6EA; --cream-2: #EFE4C9; --cream-3: #DFCFA6;
+      --gold: #F3CB6B;
+      --ink: #2A1B3D;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #050210;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Poppins', sans-serif;
+      user-select: none; -webkit-user-select: none;
+    }
+
+    .stage-scaler {
+      width: 100vw; height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ============================================================
+       STAGE — deep space background with 3D depth layers
+    ============================================================ */
+    .stage {
+      position: relative;
+      width: 1280px; height: 720px;
+      background: 
+        radial-gradient(ellipse 700px 500px at 50% 44%, #3d1d6a 0%, #221042 38%, #130928 72%, #080318 100%);
+      overflow: hidden;
+      box-shadow: 
+        0 60px 150px rgba(0,0,0,0.9),
+        0 0 0 1px rgba(255,255,255,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.07);
+      border-radius: 14px;
+      flex-shrink: 0;
+      transform-origin: center center;
+    }
+
+    /* Live 3D star-field canvas */
+    #star-canvas {
+      position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    }
+
+    /* Ambient Glow Blobs */
+    .glow {
+      position: absolute; border-radius: 50%;
+      filter: blur(90px); opacity: 0.22; pointer-events: none; z-index: 1;
+    }
+    .glow.r { width: 500px; height: 500px; background: var(--red-2);   top: -190px; right: -130px; }
+    .glow.g { width: 460px; height: 460px; background: var(--green-2); top: -170px; left: -150px; }
+    .glow.y { width: 500px; height: 500px; background: var(--yellow-2);bottom: -200px; right: -140px; opacity: 0.14; }
+    .glow.b { width: 460px; height: 460px; background: var(--blue-2);  bottom: -180px; left: -130px; }
+
+    /* Scan line overlay for depth */
+    .stage::after {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none; z-index: 2;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.04) 3px,
+        rgba(0,0,0,0.04) 4px
+      );
+    }
+
+    /* ============================================================
+       GLASS BASE CLASS
+    ============================================================ */
+    .glass {
+      background: linear-gradient(155deg, rgba(255,255,255,0.13), rgba(255,255,255,0.03));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow:
+        0 -1px 0 rgba(255,255,255,0.14),
+        0 2px 0 rgba(0,0,0,0.35),
+        0 8px 28px rgba(0,0,0,0.5),
+        0 20px 50px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.22),
+        inset 0 -1px 0 rgba(0,0,0,0.18);
+    }
+
+    /* ============================================================
+       TOP BAR
+    ============================================================ */
+    .topbar {
+      position: absolute; top: 14px; left: 18px; right: 18px; height: 60px;
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.08);
+      border-top: 1px solid rgba(255,255,255,0.2);
+      border-left: 1px solid rgba(255,255,255,0.15);
+      border-right: 1px solid rgba(0,0,0,0.2);
+      border-bottom: 2px solid rgba(0,0,0,0.35);
+      cursor: pointer; transition: all 0.18s; font-size: 18px; position: relative;
+      color: #EDE6FF;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+    .icon-btn:hover {
+      background: rgba(255,255,255,0.16);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.22);
+    }
+    .icon-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.2);
+      border-bottom-width: 1px;
+    }
+    .icon-btn.active {
+      background: linear-gradient(145deg, #13d68e, #059669);
+      border-top-color: #34d399;
+      border-left-color: #34d399;
+      border-bottom-color: #03503d;
+      box-shadow: 0 0 16px rgba(16,185,129,0.7), 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+    .icon-btn.muted {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .logo {
+      font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 22px;
+      letter-spacing: 0.5px;
+      background: linear-gradient(180deg, #FFEFC0, var(--gold) 55%, #C9922F);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      line-height: 1.1; cursor: pointer;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+    }
+    .logo span {
+      font-size: 10px; display: block; letter-spacing: 3px;
+      color: #B9A9E0; -webkit-text-fill-color: #B9A9E0;
+      font-family: 'Poppins', sans-serif; font-weight: 500;
+    }
+
+    .room-pill {
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(245, 158, 11, 0.18) !important;
+      border: 1px solid rgba(245, 158, 11, 0.5) !important;
+      transition: all 0.2s;
+    }
+    .room-pill:hover {
+      background: rgba(245, 158, 11, 0.3) !important;
+      transform: scale(1.05) translateY(-1px);
+      box-shadow: 0 6px 20px rgba(245,158,11,0.28) !important;
+    }
+    .room-pill-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #34d399;
+      box-shadow: 0 0 10px #34d399, 0 0 22px rgba(52,211,153,0.45);
+      animation: dotPulse 2s infinite ease-in-out;
+    }
+    @keyframes dotPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(0.82); }
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .pill {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 999px; padding: 5px 14px 5px 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .coin-dot {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: radial-gradient(circle at 28% 22%, #FFFFF5, #FFE566 30%, var(--gold) 60%, #A97015);
+      box-shadow: 
+        inset 0 -3px 5px rgba(0,0,0,0.32),
+        inset 0 2px 4px rgba(255,255,255,0.75),
+        0 3px 8px rgba(0,0,0,0.4),
+        0 0 12px rgba(243,203,107,0.35);
+    }
+    .gem-dot {
+      width: 20px; height: 20px; border-radius: 5px; transform: rotate(45deg);
+      background: radial-gradient(circle at 28% 22%, #F0FBFF, #7DE8FF 40%, #4FC3E8 62%, #1A6FA0);
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.28), inset 0 2px 3px rgba(255,255,255,0.65), 0 0 12px rgba(79,195,232,0.35);
+    }
+    .pill b { font-size: 13px; color: #FBF6EA; font-weight: 600; }
+    .avatar-mini {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: radial-gradient(circle at 32% 28%, #90FFD0, var(--green-2) 58%, var(--green-3));
+      border: 2px solid rgba(255,255,255,0.65);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Baloo 2'; font-weight: 700; font-size: 14px; color: #fff;
+      box-shadow: 
+        inset 0 -3px 6px rgba(0,0,0,0.32), 
+        inset 0 3px 5px rgba(255,255,255,0.55),
+        0 4px 12px rgba(0,0,0,0.45), 
+        0 0 14px rgba(34,185,107,0.38);
+    }
+
+    /* Ribbon Status */
+    .ribbon {
+      position: absolute; top: 82px; left: 50%; transform: translateX(-50%);
+      font-family: 'Baloo 2'; font-weight: 600; font-size: 14px; color: #F3CB6B;
+      letter-spacing: 1.5px; z-index: 8;
+      background: rgba(20,10,44,0.82);
+      border-top: 1px solid rgba(243,203,107,0.4);
+      border-left: 1px solid rgba(243,203,107,0.3);
+      border-right: 1px solid rgba(243,203,107,0.25);
+      border-bottom: 2px solid rgba(100,60,0,0.4);
+      padding: 4px 20px; border-radius: 999px;
+      box-shadow: 
+        0 6px 22px rgba(0,0,0,0.55),
+        0 2px 4px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        0 0 24px rgba(243,203,107,0.12);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .spectator-banner {
+      position: absolute; top: 82px; left: 24px;
+      background: linear-gradient(135deg, rgba(168,85,247,0.42), rgba(126,34,206,0.62));
+      border: 1px solid rgba(192,132,252,0.5);
+      color: #f3e8ff; padding: 4px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; z-index: 8;
+      box-shadow: 0 4px 14px rgba(126,34,206,0.35);
+    }
+
+    /* ============================================================
+       BOARD ZONE — Flat 1:1 aligned interactive board platform
+    ============================================================ */
+    .board-zone {
+      position: absolute; top: 86px; left: 50%; transform: translateX(-50%);
+      width: 616px; height: 616px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 3;
+    }
+
+    .board-frame {
+      position: relative; width: 612px; height: 612px; border-radius: 22px;
+      background: linear-gradient(155deg, #50366e, #2f1d50, #1c1038);
+      padding: 6px;
+      transition: box-shadow 0.3s;
+      /* Layered 3D depth shadows */
+      box-shadow: 
+        /* Top edge highlight */
+        0 -2px 0 rgba(255,255,255,0.18),
+        /* Right edge */
+        3px 0 6px rgba(0,0,0,0.35),
+        /* Primary shadows */
+        0 16px 40px rgba(0,0,0,0.7),
+        0 36px 70px rgba(0,0,0,0.55),
+        0 60px 100px rgba(0,0,0,0.35),
+        /* Purple glow halo */
+        0 0 0 1px rgba(255,255,255,0.09),
+        0 0 80px rgba(100,50,200,0.22),
+        /* Inner highlights */
+        inset 0 2px 0 rgba(255,255,255,0.22),
+        inset 0 -3px 0 rgba(0,0,0,0.5);
+    }
+    .board-frame:hover {
+      box-shadow: 
+        0 -2px 0 rgba(255,255,255,0.22),
+        0 24px 55px rgba(0,0,0,0.8),
+        0 50px 90px rgba(0,0,0,0.6),
+        0 0 0 1px rgba(255,255,255,0.11),
+        0 0 100px rgba(100,50,200,0.3),
+        inset 0 2px 0 rgba(255,255,255,0.26),
+        inset 0 -3px 0 rgba(0,0,0,0.55);
+    }
+    /* 3D extruded bottom slab */
+    .board-frame::before {
+      content: '';
+      position: absolute;
+      bottom: -14px; left: 8px; right: 8px; height: 14px;
+      background: linear-gradient(180deg, #160e32, #0c0620);
+      border-radius: 0 0 20px 20px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.7), 0 0 40px rgba(80,30,160,0.2);
+    }
+    /* Glass sheen overlay */
+    .board-frame::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: 22px;
+      background: linear-gradient(165deg, 
+        rgba(255,255,255,0.12) 0%, 
+        rgba(255,255,255,0.04) 35%, 
+        transparent 60%, 
+        rgba(0,0,0,0.1) 100%);
+      pointer-events: none;
+    }
+
+    .board {
+      position: relative; width: 600px; height: 600px; border-radius: 16px;
+      background: var(--cream-1);
+      overflow: hidden;
+      box-shadow: 
+        inset 0 4px 14px rgba(0,0,0,0.22),
+        inset 0 -2px 6px rgba(0,0,0,0.12),
+        inset 0 0 0 1px rgba(0,0,0,0.06);
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      grid-template-rows: repeat(15, 1fr);
+    }
+
+    /* ============================================================
+       YARDS — 3D inset well for all 4 colors (Green, Red, Yellow, Blue)
+    ============================================================ */
+    .yard {
+      position: absolute !important;
+      width: 240px !important;
+      height: 240px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 2 !important;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .yard:active {
+      filter: brightness(1.04);
+    }
+    .yard-green {
+      top: 0 !important; left: 0 !important;
+      background: linear-gradient(145deg, #5fe39b, #10b981 55%, #047857) !important;
+      border-bottom-right-radius: 34px !important;
+      box-shadow: inset -6px -6px 20px rgba(0,0,0,0.28), inset 6px 6px 12px rgba(255,255,255,0.2) !important;
+    }
+    .yard-red {
+      top: 0 !important; left: 360px !important;
+      background: linear-gradient(145deg, #ff8080, #ef4444 55%, #b91c1c) !important;
+      border-bottom-left-radius: 34px !important;
+      box-shadow: inset 6px -6px 20px rgba(0,0,0,0.28), inset -6px 6px 12px rgba(255,255,255,0.2) !important;
+    }
+    .yard-yellow {
+      top: 360px !important; left: 360px !important;
+      background: linear-gradient(145deg, #ffe066, #f59e0b 55%, #b45309) !important;
+      border-top-left-radius: 34px !important;
+      box-shadow: inset 6px 6px 20px rgba(0,0,0,0.28), inset -6px -6px 12px rgba(255,255,255,0.2) !important;
+    }
+    .yard-blue {
+      top: 360px !important; left: 0 !important;
+      background: linear-gradient(145deg, #70b5ff, #3b82f6 55%, #1d4ed8) !important;
+      border-top-right-radius: 34px !important;
+      box-shadow: inset -6px 6px 20px rgba(0,0,0,0.28), inset 6px -6px 12px rgba(255,255,255,0.2) !important;
+    }
+
+    .yard-inner {
+      width: 172px !important;
+      height: 172px !important;
+      border-radius: 20px !important;
+      background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(245,245,250,0.92)) !important;
+      box-shadow:
+        inset 0 4px 12px rgba(0,0,0,0.22),
+        inset 0 -2px 6px rgba(0,0,0,0.08),
+        inset 0 1px 0 rgba(255,255,255,1),
+        0 8px 20px rgba(0,0,0,0.35),
+        0 2px 4px rgba(0,0,0,0.2) !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      grid-template-rows: 1fr 1fr !important;
+      gap: 12px !important;
+      align-items: center !important;
+      justify-items: center !important;
+      padding: 16px !important;
+      cursor: pointer;
+    }
+    .yard-slot {
+      width: 58px !important;
+      height: 58px !important;
+      border-radius: 50% !important;
+      background: radial-gradient(circle at 36% 32%, #ffffff, #e2e8f0 60%, #cbd5e1) !important;
+      border: 2px solid rgba(0,0,0,0.12) !important;
+      box-shadow:
+        inset 0 4px 8px rgba(0,0,0,0.22),
+        inset 0 -1px 3px rgba(255,255,255,0.7),
+        0 2px 5px rgba(0,0,0,0.15) !important;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .yard-slot:hover {
+      transform: scale(1.05);
+    }
+
+    /* Player Left Disabled Pod */
+    .hud.player-left {
+      opacity: 0.38 !important;
+      filter: grayscale(0.85) !important;
+      pointer-events: none !important;
+      border-color: rgba(239, 68, 68, 0.4) !important;
+      background: rgba(40, 20, 30, 0.4) !important;
+    }
+    .hud.player-left .hud-name {
+      color: #94a3b8 !important;
+      text-decoration: line-through !important;
+    }
+    .hud.player-left .hud-score {
+      color: #ef4444 !important;
+    }
+    .hud.player-left .turn-ring,
+    .hud.player-left .turn-tag {
+      display: none !important;
+    }
+
+    /* ============================================================
+       CELLS
+    ============================================================ */
+    .cell {
+      position: relative; width: 100%; height: 100%;
+      background: linear-gradient(160deg, var(--cream-1), var(--cream-2));
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cell.runway-green  { background: linear-gradient(160deg, var(--green-1),  var(--green-2)); }
+    .cell.runway-red    { background: linear-gradient(160deg, var(--red-1),    var(--red-2)); }
+    .cell.runway-yellow { background: linear-gradient(160deg, var(--yellow-1), var(--yellow-2)); }
+    .cell.runway-blue   { background: linear-gradient(160deg, var(--blue-1),   var(--blue-2)); }
+    .cell.cell-start-green  { background: linear-gradient(160deg, var(--green-1),  var(--green-2)); }
+    .cell.cell-start-red    { background: linear-gradient(160deg, var(--red-1),    var(--red-2)); }
+    .cell.cell-start-yellow { background: linear-gradient(160deg, var(--yellow-1), var(--yellow-2)); }
+    .cell.cell-start-blue   { background: linear-gradient(160deg, var(--blue-1),   var(--blue-2)); }
+
+    .cell.ring-safe::before {
+      content: '★'; font-size: 22px; color: var(--gold);
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55));
+    }
+    .cell.home-label::after {
+      content: 'HOME'; font-size: 8px; font-weight: 800; letter-spacing: 0.5px;
+      color: rgba(0,0,0,0.4);
+    }
+
+    /* Center 3x3 */
+    .center-home {
+      grid-area: 7 / 7 / 10 / 10;
+      position: relative; width: 120px; height: 120px;
+      background: transparent;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.32); z-index: 2;
+    }
+    select, select option, .form-group select option {
+      background-color: #1a0f35 !important;
+      color: #ffffff !important;
+    }
+    .center-trophy {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 28px; height: 28px; border-radius: 6px;
+      background: radial-gradient(circle at 28% 22%, #FFFCEF, var(--gold) 58%, #A87015);
+      box-shadow:
+        0 0 20px 5px rgba(255,213,120,0.75),
+        0 0 45px rgba(255,213,120,0.4),
+        inset 0 -3px 5px rgba(0,0,0,0.32),
+        inset 0 2px 4px rgba(255,255,255,0.85);
+      z-index: 3; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: #fff;
+      animation: trophyPulse 2.5s infinite ease-in-out;
+    }
+    @keyframes trophyPulse {
+      0%,100% { box-shadow: 0 0 20px 5px rgba(255,213,120,0.75), 0 0 45px rgba(255,213,120,0.4), inset 0 -3px 5px rgba(0,0,0,0.32); }
+      50%      { box-shadow: 0 0 32px 10px rgba(255,213,120,0.9), 0 0 70px rgba(255,213,120,0.55), inset 0 -3px 5px rgba(0,0,0,0.32); }
+    }
+
+    /* ============================================================
+       TOKENS — full 3D glass sphere
+    ============================================================ */
+    .token-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 25;
+    }
+    .token {
+      position: absolute; width: 36px; height: 36px; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      border: 2.5px solid rgba(255,255,255,0.92);
+      cursor: pointer; pointer-events: auto;
+      touch-action: manipulation;
+      transition: left 0.12s linear, top 0.12s linear, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 10;
+      /* Glass sphere effect */
+      box-shadow:
+        /* Outer drop shadow */
+        0 8px 18px rgba(0,0,0,0.6),
+        /* Bottom ground shadow */
+        0 16px 8px -8px rgba(0,0,0,0.45),
+        /* Inner dark bottom */
+        inset 0 -6px 10px rgba(0,0,0,0.38),
+        /* Inner bright top */
+        inset 0 4px 7px rgba(255,255,255,0.72);
+    }
+    /* Large primary specular highlight */
+    .token::after {
+      content: '';
+      position: absolute; top: 4px; left: 6px; width: 11px; height: 8px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 50%; filter: blur(1.5px);
+      pointer-events: none;
+    }
+    /* Small secondary specular point */
+    .token::before {
+      content: '';
+      position: absolute; top: 9px; left: 16px; width: 5px; height: 4px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%; filter: blur(0.5px);
+      pointer-events: none;
+    }
+    .token-green  { background: radial-gradient(circle at 30% 24%, #b0ffd8, var(--green-1) 35%, var(--green-2) 62%, var(--green-3) 90%); }
+    .token-red    { background: radial-gradient(circle at 30% 24%, #ffbfbf, var(--red-1)   35%, var(--red-2)   62%, var(--red-3)   90%); }
+    .token-yellow { background: radial-gradient(circle at 30% 24%, #fff9c4, var(--yellow-1)35%, var(--yellow-2)62%, var(--yellow-3)90%); }
+    .token-blue   { background: radial-gradient(circle at 30% 24%, #c4e0ff, var(--blue-1)  35%, var(--blue-2)  62%, var(--blue-3)  90%); }
+
+    .token.can-move {
+      animation: tokenHopBounce 0.72s infinite ease-in-out alternate;
+      box-shadow:
+        0 0 0 4px #fbbf24,
+        0 0 28px 10px rgba(251, 191, 36, 0.88),
+        0 14px 28px rgba(0,0,0,0.65),
+        inset 0 -6px 10px rgba(0,0,0,0.38),
+        inset 0 4px 7px rgba(255,255,255,0.85);
+      z-index: 60 !important;
+      cursor: pointer !important;
+    }
+    @keyframes tokenHopBounce {
+      0%   { transform: translate(-50%, -50%) scale(1);    filter: brightness(1); }
+      100% { transform: translate(-50%, -50%) scale(1.22); filter: brightness(1.25); }
+    }
+
+    /* ============================================================
+       PLAYER HUD CHIPS — 3D raised card
+    ============================================================ */
+    .hud {
+      position: absolute; width: 220px; height: 68px; border-radius: 18px;
+      display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+      z-index: 6;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
+    }
+    .hud:hover {
+      transform: translateY(-3px) scale(1.025);
+    }
+    .hud-avatar {
+      width: 48px; height: 48px; border-radius: 50%; flex: none;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Baloo 2'; font-weight: 700; font-size: 16px; color: #fff;
+      border: 2.5px solid rgba(255,255,255,0.68);
+      position: relative;
+      box-shadow:
+        inset 0 -5px 10px rgba(0,0,0,0.32),
+        inset 0 3px 6px rgba(255,255,255,0.55),
+        0 5px 12px rgba(0,0,0,0.45);
+    }
+    /* Avatar specular */
+    .hud-avatar::after {
+      content: '';
+      position: absolute; top: 5px; left: 8px; width: 13px; height: 8px;
+      background: rgba(255,255,255,0.55); border-radius: 50%; filter: blur(2px);
+      pointer-events: none;
+    }
+    .hud-name  { font-size: 14px; font-weight: 600; color: #FBF6EA; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hud-score { font-size: 11px; color: #C9BEE0; margin-top: 2px; }
+
+    .hud-green  .hud-avatar { background: radial-gradient(circle at 32% 26%, #b0ffd8, var(--green-2) 58%, var(--green-3)); }
+    .hud-red    .hud-avatar { background: radial-gradient(circle at 32% 26%, #ffbfbf, var(--red-2)   58%, var(--red-3)); }
+    .hud-yellow .hud-avatar { background: radial-gradient(circle at 32% 26%, #fff9c4, var(--yellow-2)58%, var(--yellow-3)); }
+    .hud-blue   .hud-avatar { background: radial-gradient(circle at 32% 26%, #c4e0ff, var(--blue-2)  58%, var(--blue-3)); }
+
+    .hud-green  { top: 120px; left: 24px; }
+    .hud-red    { top: 120px; right: 24px; }
+    .hud-yellow { bottom: 30px; right: 24px; }
+    .hud-blue   { bottom: 30px; left: 24px; }
+
+    .turn-ring {
+      position: absolute; inset: -4px; border-radius: 22px;
+      border: 2.5px solid var(--gold);
+      box-shadow: 0 0 20px 5px rgba(243,203,107,0.7), 0 0 45px rgba(243,203,107,0.28);
+      animation: turnGlowPulse 1.4s infinite ease-in-out alternate;
+    }
+    @keyframes turnGlowPulse {
+      0%   { opacity: 0.6; transform: scale(0.99); box-shadow: 0 0 12px 3px rgba(243,203,107,0.55); }
+      100% { opacity: 1;   transform: scale(1.025); box-shadow: 0 0 28px 8px rgba(243,203,107,0.85); }
+    }
+
+    .turn-tag {
+      position: absolute; top: -10px; left: 16px;
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      color: #fff; font-size: 9px; font-weight: 700;
+      letter-spacing: 1px; padding: 2px 10px; border-radius: 999px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.38), 0 0 14px rgba(245,158,11,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .hud-avatar.is-speaking::before {
+      content: ''; position: absolute; inset: -6px; border-radius: 50%;
+      border: 2px solid #38bdf8;
+      animation: speakingRipple 1s infinite ease-out;
+    }
+    @keyframes speakingRipple {
+      0%   { transform: scale(0.9); opacity: 0.8; }
+      100% { transform: scale(1.45); opacity: 0; }
+    }
+
+    /* ============================================================
+       TRAVELING DICE PEDESTAL (Moves to Active Player Profile)
+    ============================================================ */
+    .dice-dock {
+      position: absolute;
+      top: 216px;
+      left: 95px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      pointer-events: auto;
+      transition: top 0.45s cubic-bezier(0.34, 1.35, 0.64, 1), left 0.45s cubic-bezier(0.34, 1.35, 0.64, 1);
+    }
+    .pedestal-glow.glow-green  { background: radial-gradient(circle, rgba(34,185,107,0.7) 0%, transparent 70%); }
+    .pedestal-glow.glow-red    { background: radial-gradient(circle, rgba(239,68,68,0.7) 0%, transparent 70%); }
+    .pedestal-glow.glow-yellow { background: radial-gradient(circle, rgba(245,158,11,0.7) 0%, transparent 70%); }
+    .pedestal-glow.glow-blue   { background: radial-gradient(circle, rgba(59,130,246,0.7) 0%, transparent 70%); }
+
+    .top-pill-btn {
+      height: 36px;
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      background: linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,255,255,0.22);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      flex-shrink: 0;
+    }
+    .top-pill-btn:hover {
+      background: linear-gradient(160deg, rgba(255,255,255,0.24), rgba(255,255,255,0.1));
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+    }
+    .top-pill-btn:active {
+      transform: translateY(1px);
+    }
+    .dice-pedestal-wrapper {
+      position: relative; width: 78px; height: 78px;
+      display: flex; justify-content: center; align-items: center; cursor: pointer;
+    }
+    .dice-btn {
+      width: 68px; height: 68px; border-radius: 18px;
+      background: linear-gradient(145deg, #FFFFFF, #EEE8D6 40%, #DDD5BC);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s;
+      /* Full 3D extruded press button */
+      box-shadow:
+        inset 0 3px 5px rgba(255,255,255,0.95),
+        inset 0 -4px 8px rgba(0,0,0,0.18),
+        0 -1px 0 rgba(255,255,255,0.55),
+        0 2px 0 rgba(0,0,0,0.25),
+        0 6px 18px rgba(0,0,0,0.52),
+        0 14px 32px rgba(0,0,0,0.36),
+        /* Side extrusion */
+        2px 4px 0 #C8C0A8,
+        2px 6px 0 #B8B098,
+        2px 8px 0 #A8A088,
+        2px 10px 8px rgba(0,0,0,0.42);
+    }
+    .dice-btn:hover {
+      transform: scale(1.08) translateY(-3px);
+      box-shadow:
+        inset 0 3px 5px rgba(255,255,255,0.95),
+        inset 0 -4px 8px rgba(0,0,0,0.18),
+        0 10px 28px rgba(0,0,0,0.62),
+        0 20px 42px rgba(0,0,0,0.42),
+        2px 5px 0 #C8C0A8,
+        2px 8px 0 #B8B098,
+        2px 11px 0 #A8A088,
+        2px 15px 10px rgba(0,0,0,0.48);
+    }
+    .dice-btn:active {
+      transform: scale(0.95) translateY(4px);
+      box-shadow:
+        inset 0 2px 4px rgba(255,255,255,0.8),
+        inset 0 -2px 4px rgba(0,0,0,0.15),
+        0 3px 10px rgba(0,0,0,0.45),
+        1px 2px 0 #C8C0A8,
+        1px 3px 4px rgba(0,0,0,0.35);
+    }
+
+    .dice-label {
+      position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+      font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #E9DFFF;
+      background: rgba(0,0,0,0.5); padding: 2px 10px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16); white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .action-pill-btn {
+      background: linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04));
+      border-top: 1px solid rgba(255,255,255,0.22);
+      border-left: 1px solid rgba(255,255,255,0.16);
+      border-right: 1px solid rgba(0,0,0,0.18);
+      border-bottom: 2px solid rgba(0,0,0,0.35);
+      color: #fff; padding: 8px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.18s;
+      box-shadow: 0 5px 14px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .action-pill-btn:hover {
+      background: linear-gradient(160deg, rgba(255,255,255,0.22), rgba(255,255,255,0.09));
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.48), 0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+    .action-pill-btn:active {
+      transform: translateY(2px);
+      border-bottom-width: 1px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    /* Voice HTTPS Notice */
+    .voice-notice-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.78);
+      backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;
+      z-index: 1000; animation: fadeIn 0.2s ease-out;
+    }
+    .voice-notice-modal {
+      background: linear-gradient(150deg, #241442, #160c2b);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      border-radius: 20px; padding: 24px; max-width: 440px; width: 90%;
+      text-align: center; color: #fff;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.07), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .voice-notice-badge { font-size: 40px; margin-bottom: 10px; }
+    .voice-notice-modal h2 { font-size: 20px; font-weight: 800; color: #facc15; margin-bottom: 8px; }
+    .voice-notice-modal p { font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 12px; }
+    .voice-notice-sub { color: #38bdf8 !important; font-size: 14px !important; }
+    .voice-notice-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+    .voice-btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 12px;
+      font-weight: 800; font-size: 14px; box-shadow: 0 4px 14px rgba(16,185,129,0.4);
+    }
+    .voice-btn-cancel {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; padding: 10px 16px; border-radius: 12px; font-weight: 600; cursor: pointer;
+    }
+    .voice-notice-tip { font-size: 11px; color: #94a3b8; margin-top: 14px; }
+  </style>
+</head>
+<body>
+
+<div class="stage-scaler">
+  <div class="stage" id="stage">
+
+    <!-- 3D Star-field Canvas -->
+    <canvas id="star-canvas"></canvas>
+
+    <!-- Ambient glows -->
+    <div class="glow g"></div>
+    <div class="glow r"></div>
+    <div class="glow y"></div>
+    <div class="glow b"></div>
+
+    <!-- Top Bar -->
+    <div class="topbar glass">
+      <div class="topbar-left">
+        <div class="icon-btn" id="open-menu-btn" title="Game Menu">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </div>
+        <div class="logo" id="logo-btn">LUDO ROYALE<span>PREMIUM TABLE</span></div>
+        <div class="pill room-pill" id="room-code-badge" title="Click to view Room Lobby">
+          <span class="room-pill-dot"></span>
+          <span>ROOM: <strong id="room-code-display">ONLINE</strong></span>
+        </div>
+        <button class="top-pill-btn" id="auto-move-btn" title="Toggle Auto-Move">⚡ Auto</button>
+        <button class="top-pill-btn" id="wheel-btn" title="Emoji & Taunts">😂 Taunts</button>
+      </div>
+      <div class="topbar-right">
+        <div class="pill"><div class="coin-dot"></div><b>24,680</b></div>
+        <div class="pill"><div class="gem-dot"></div><b>312</b></div>
+        <div class="icon-btn" id="toggle-speaker-btn" title="Toggle Speaker"><span id="speaker-icon">🔊</span></div>
+        <div class="icon-btn" id="toggle-mic-btn" title="Toggle Microphone"><span id="mic-icon">🎙️</span></div>
+        <div class="icon-btn" id="open-chat-btn" title="Open Chat">
+          <span id="chat-icon">💬</span>
+          <span id="unread-chat-dot" class="notification-dot hidden"></span>
+        </div>
+        <div class="icon-btn danger-btn" id="leave-room-btn" title="Leave Game" style="background:rgba(239,68,68,0.18); border-color:rgba(239,68,68,0.45); color:#fca5a5;">🚪</div>
+        <div class="avatar-mini" id="my-avatar-mini">👑</div>
+      </div>
+    </div>
+
+    <!-- Status Ribbon Toast -->
+    <div class="ribbon" id="game-status-toast">
+      <span id="toast-icon">🎲</span> <span id="toast-text">Roll the dice to start!</span>
+    </div>
+
+    <!-- Spectator Mode Banner -->
+    <div class="spectator-banner hidden" id="spectator-banner">
+      👁️ Spectator (Viewer) Mode Active
+    </div>
+
+    <!-- Board Zone -->
+    <div class="board-zone" id="board-wrapper">
+      <div class="board-frame">
+        <div class="board" id="ludo-board">
+          <!-- Dynamically populated by buildBoardGrid() -->
+          <div id="token-layer" class="token-layer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Player HUD Chips -->
+    <!-- Green (Top-Left, Player 1) -->
+    <div class="hud glass hud-green" id="pod-green">
+      <div class="turn-ring" id="timer-spinner-green"></div>
+      <div class="turn-tag" id="turn-tag-green">YOUR TURN</div>
+      <div class="hud-avatar" id="avatar-ring-green">P1</div>
+      <div>
+        <div class="hud-name" id="name-green">Player 1</div>
+        <div class="hud-score" id="score-green">0 home · waiting</div>
+      </div>
+    </div>
+
+    <!-- Red (Top-Right, Player 2) -->
+    <div class="hud glass hud-red" id="pod-red">
+      <div class="turn-ring hidden" id="timer-spinner-red"></div>
+      <div class="turn-tag hidden" id="turn-tag-red">YOUR TURN</div>
+      <div class="hud-avatar" id="avatar-ring-red">P2</div>
+      <div>
+        <div class="hud-name" id="name-red">Player 2</div>
+        <div class="hud-score" id="score-red">0 home · waiting</div>
+      </div>
+    </div>
+
+    <!-- Yellow (Bottom-Right, Player 3) -->
+    <div class="hud glass hud-yellow" id="pod-yellow">
+      <div class="turn-ring hidden" id="timer-spinner-yellow"></div>
+      <div class="turn-tag hidden" id="turn-tag-yellow">YOUR TURN</div>
+      <div class="hud-avatar" id="avatar-ring-yellow">P3</div>
+      <div>
+        <div class="hud-name" id="name-yellow">Player 3</div>
+        <div class="hud-score" id="score-yellow">0 home · waiting</div>
+      </div>
+    </div>
+
+    <!-- Blue (Bottom-Left, Player 4) -->
+    <div class="hud glass hud-blue" id="pod-blue">
+      <div class="turn-ring hidden" id="timer-spinner-blue"></div>
+      <div class="turn-tag hidden" id="turn-tag-blue">YOUR TURN</div>
+      <div class="hud-avatar" id="avatar-ring-blue">P4</div>
+      <div>
+        <div class="hud-name" id="name-blue">Player 4</div>
+        <div class="hud-score" id="score-blue">0 home · waiting</div>
+      </div>
+    </div>
+
+    <!-- Floating Dice Pedestal (Travels to Active Player Profile) -->
+    <div class="dice-dock" id="dice-dock">
+      <div class="dice-pedestal-wrapper" id="dice-pedestal-wrapper">
+        <div class="dice-label" id="dice-label">TAP TO ROLL</div>
+        <div class="pedestal-glow glow-green" id="pedestal-glow"></div>
+        <div class="pedestal-ring">
+          <div class="dice-3d" id="dice-3d">
+            <div class="dice-face dice-face-1"><div class="pip"></div></div>
+            <div class="dice-face dice-face-2"><div class="pip"></div><div class="pip"></div></div>
+            <div class="dice-face dice-face-3"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+            <div class="dice-face dice-face-4"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+            <div class="dice-face dice-face-5"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+            <div class="dice-face dice-face-6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==========================================
+     MODALS & OVERLAYS
+     ========================================== -->
+
+<!-- 1. Game Menu Modal (Create Room, Join Room, Pass & Play) -->
+<div class="modal-overlay hidden" id="game-menu-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-title">Ludo Royale</h2>
+        <div class="modal-hero-sub">Local & Online Multiplayer Pass & Play</div>
+      </div>
+      <button class="modal-close" id="close-menu-btn">&times;</button>
+    </div>
+
+    <div id="active-game-banner" class="feature-callout hidden" style="border: 1px solid rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.12); margin-bottom: 14px; text-align: center;">
+      <span>⚠️ You are currently in an active game (<strong id="active-game-room-id">ROOM</strong>).</span>
+      <div style="margin-top: 8px;">
+        <button class="btn-primary" id="modal-leave-game-btn" style="background: linear-gradient(135deg, #ef4444, #b91c1c); padding: 8px 18px; font-size: 13px;">🚪 Leave Current Game</button>
+      </div>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="tab-btn active" data-tab="create-room">Create Room</button>
+      <button class="tab-btn" data-tab="join-room">Join Room</button>
+      <button class="tab-btn" data-tab="pass-play">Pass & Play</button>
+      <button class="tab-btn" data-tab="vs-bots">Vs Bots</button>
+    </div>
+
+    <div class="tab-content active" id="tab-create-room">
+      <div class="feature-callout info-callout">
+        Create an online room and share the 6-letter Room ID. If 4 players join, extra users can watch as <strong>Spectators</strong>!
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="create-player-name" value="Player 1" maxlength="15">
+        </div>
+        <div class="form-group">
+          <label>Number of Players</label>
+          <select id="create-player-count">
+            <option value="2">2 Players (Green vs Yellow)</option>
+            <option value="3">3 Players (Green, Red, Yellow)</option>
+            <option value="4" selected>4 Players (All Colors)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary btn-cta" id="create-room-btn">Create Room & Play</button>
+    </div>
+
+    <div class="tab-content" id="tab-join-room">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Room Code (6 Characters)</label>
+          <input type="text" id="join-room-code" placeholder="e.g. 9D3579" maxlength="6" style="text-transform:uppercase; font-weight:800;">
+        </div>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="join-player-name" value="Player 2" maxlength="15">
+        </div>
+      </div>
+      <button class="btn-primary btn-cta" id="join-room-btn">Join Game Room</button>
+    </div>
+
+    <div class="tab-content" id="tab-pass-play">
+      <div class="feature-callout">
+        Play with family or friends on this single screen!
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Select Player Count</label>
+        <select id="pass-player-count">
+          <option value="2">2 Players</option>
+          <option value="3">3 Players</option>
+          <option value="4" selected>4 Players</option>
+        </select>
+      </div>
+      <button class="btn-primary btn-cta" id="start-pass-play-btn">Start Pass & Play</button>
+    </div>
+
+    <div class="tab-content" id="tab-vs-bots">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="bot-player-name" value="Player" maxlength="15">
+        </div>
+        <div class="form-group">
+          <label>Players</label>
+          <select id="bot-opponents-count">
+            <option value="2">2 Players (You vs 1 Bot)</option>
+            <option value="4" selected>4 Players (You vs 3 Bots)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary btn-cta" id="start-vs-bots-btn">Play Against Bots</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Room Lobby Modal (Share Room ID & Invite Friends) -->
+<div class="modal-overlay hidden" id="room-lobby-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-title">Room Lobby</h2>
+        <div class="modal-hero-sub">Share code to invite friends or viewers</div>
+      </div>
+      <button class="modal-close" id="close-lobby-btn">&times;</button>
+    </div>
+
+    <div class="room-share-box">
+      <div class="room-share-label">SHARE ROOM CODE</div>
+      <div class="room-share-code" id="lobby-room-code">------</div>
+      <div class="room-share-actions">
+        <button class="share-btn highlight" id="lobby-copy-code-btn">📋 Copy Code</button>
+        <button class="share-btn" id="lobby-copy-link-btn">🔗 Copy Invite Link</button>
+      </div>
+    </div>
+
+    <div class="spectator-info-box">
+      <span>👁️ <strong>Spectators / Viewers:</strong> Extra users who join will automatically watch this game live.</span>
+    </div>
+
+    <div style="font-size:12px; font-weight:700; color:#94a3b8; margin: 10px 0 4px 0;">PLAYERS & BOTS</div>
+    <div class="lobby-roster" id="lobby-roster">
+      <!-- Generated by updateUIState -->
+    </div>
+
+    <div id="lobby-status-banner" style="text-align: center; font-size: 14px; font-weight: 700; color: #facc15; margin: 12px 0 6px;">
+      Waiting for players to join...
+    </div>
+
+    <div id="lobby-start-container" style="margin-top: 8px;">
+      <button class="btn-primary btn-cta hidden" id="lobby-start-game-btn" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 16px; padding: 14px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);">
+        🚀 Start Game Now
+      </button>
+      <div id="lobby-wait-text" class="hidden" style="text-align: center; font-size: 13px; color: #94a3b8; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+        ⏳ All players joined! Waiting for Room Host to click Start...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. In-Game Chat & Emoji Drawer -->
+<div class="modal-overlay hidden" id="chat-overlay-modal">
+  <div class="modal-card" style="max-width: 440px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Game Chat & Reactions</h2>
+      <button class="modal-close" id="close-chat-btn">&times;</button>
+    </div>
+
+    <!-- Quick Voice Reactions Bar -->
+    <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:8px;">
+      <button class="action-pill-btn quick-reaction-btn" data-emoji="😂" data-voice="Haha in your face!" data-sound="laugh">😂 Laugh</button>
+      <button class="action-pill-btn quick-reaction-btn" data-emoji="🔥" data-voice="I am on fire!" data-sound="cheer">🔥 Fire</button>
+      <button class="action-pill-btn quick-reaction-btn" data-emoji="😭" data-voice="Oh no, mercy please!" data-sound="sad">😭 Cry</button>
+      <button class="action-pill-btn quick-reaction-btn" data-emoji="👑" data-voice="Bow to the King!" data-sound="cheer">👑 King</button>
+      <button class="action-pill-btn quick-reaction-btn" data-emoji="🎲" data-voice="Give me a six!" data-sound="pop">🎲 Six</button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages" style="height: 220px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:12px; padding:10px; margin-bottom:10px;">
+      <!-- Chat bubbles -->
+    </div>
+
+    <form id="chat-form" style="display:flex; gap:8px;">
+      <input type="text" id="chat-input" placeholder="Type a message..." maxlength="100" style="flex:1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 14px; border-radius:12px; outline:none;">
+      <button type="submit" class="btn-primary" style="padding:10px 18px;">Send</button>
+    </form>
+  </div>
+</div>
+
+<!-- 4. Victory Celebration Modal -->
+<div class="modal-overlay hidden" id="victory-modal">
+  <canvas id="confetti-canvas" style="position:fixed; inset:0; pointer-events:none; z-index:999;"></canvas>
+  <div class="modal-card victory-card">
+    <div class="victory-trophy-anim">🏆</div>
+    <h2 class="victory-title">Victory Royale!</h2>
+    <p style="color:#cbd5e1; font-size:13px; margin: 6px 0 14px 0;">Congratulations to the winners of this epic round!</p>
+
+    <div class="podium-list" id="victory-podium">
+      <!-- Generated dynamically -->
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+      <button class="btn-primary" id="rematch-btn">🔄 Rematch (Play Again)</button>
+      <button class="share-btn" id="victory-leave-btn" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#fca5a5;">🚪 Leave Game</button>
+      <button class="share-btn" id="victory-lobby-btn">Lobby</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stage Auto-Fit Script -->
+<script>
+  function fitStageToScreen() {
+    const stage = document.getElementById('stage');
+    if (!stage) return;
+    const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    stage.style.transform = `scale(${scale})`;
+  }
+  window.addEventListener('resize', fitStageToScreen);
+  window.addEventListener('orientationchange', fitStageToScreen);
+  document.addEventListener('DOMContentLoaded', fitStageToScreen);
+</script>
+
+<!-- 3D Star-field & Parallax Script -->
+<script>
+(function() {
+  'use strict';
+
+  // ── Star Field ──────────────────────────────────────────────
+  const canvas = document.getElementById('star-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const W = 1280, H = 720;
+  canvas.width = W; canvas.height = H;
+
+  const STAR_COUNT = 220;
+  const stars = [];
+
+  function randRange(a, b) { return a + Math.random() * (b - a); }
+
+  // Create stars with 3D depth (z = 0 far, 1 close)
+  for (let i = 0; i < STAR_COUNT; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      z: Math.random(),          // depth 0=far 1=near
+      baseSize: randRange(0.3, 2.2),
+      speed: randRange(0.04, 0.32),
+      opacity: randRange(0.25, 1.0),
+      twinklePhase: Math.random() * Math.PI * 2,
+      twinkleSpeed: randRange(0.5, 2.0),
+      color: Math.random() < 0.08 ? '#a8d8ff' : Math.random() < 0.06 ? '#ffd8a8' : '#ffffff',
+    });
+  }
+
+  let lastTime = 0;
+
+  function drawStars(ts) {
+    const dt = Math.min((ts - lastTime) / 1000, 0.05);
+    lastTime = ts;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const t = ts / 1000;
+
+    for (const s of stars) {
+      // Slow parallax drift rightward; near stars drift faster
+      s.x += s.speed * s.z * dt * 12;
+      if (s.x > W) { s.x = 0; s.y = Math.random() * H; }
+
+      // Twinkle
+      const twinkle = 0.5 + 0.5 * Math.sin(t * s.twinkleSpeed + s.twinklePhase);
+      const alpha = s.opacity * (0.55 + 0.45 * twinkle);
+      const size = s.baseSize * (0.7 + 0.3 * s.z) * (0.85 + 0.15 * twinkle);
+
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, size, 0, Math.PI * 2);
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = alpha;
+      ctx.fill();
+
+      // Glow halo for larger/close stars
+      if (size > 1.2) {
+        const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, size * 3.5);
+        grad.addColorStop(0, s.color);
+        grad.addColorStop(1, 'transparent');
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, size * 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = alpha * 0.25;
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(drawStars);
+  }
+  requestAnimationFrame(drawStars);
+
+})();
+</script>
+
+<!-- Core Scripts -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/boardCoordinates.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/voiceChat.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
