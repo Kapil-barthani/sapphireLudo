@@ -19,7 +19,7 @@ const io = new Server({
 });
 io.attach(httpServer);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4001;
 const HTTPS_PORT = process.env.HTTPS_PORT || 4001;
 
 // Serve static frontend
@@ -779,6 +779,10 @@ async function startServer() {
     }
   }
 
+  httpServer.on('error', (err) => {
+    console.error('Primary HTTP server error:', err.message);
+  });
+
   // Primary HTTP server (Railway / cloud connects here)
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
@@ -794,6 +798,9 @@ async function startServer() {
     backupPorts.forEach(port => {
       try {
         const backupServer = http.createServer(app);
+        backupServer.on('error', (err) => {
+          console.warn(`Fallback port ${port} unavailable (${err.code}), skipping.`);
+        });
         io.attach(backupServer);
         backupServer.listen(port, '0.0.0.0', () => {
           console.log(`👉  Cloud HTTP fallback listening on port ${port}`);
