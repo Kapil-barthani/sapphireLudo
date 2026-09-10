@@ -19,7 +19,7 @@ const io = new Server({
 });
 io.attach(httpServer);
 
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 4000;
 const HTTPS_PORT = process.env.HTTPS_PORT || 4001;
 
 // Serve static frontend
@@ -783,8 +783,8 @@ async function startServer() {
     console.error('Primary HTTP server error:', err.message);
   });
 
-  // Primary HTTP server (Railway / cloud connects here via dual-stack IPv4 & IPv6)
-  httpServer.listen(PORT, () => {
+  // Primary HTTP server (Railway / cloud connects here on 0.0.0.0)
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
     console.log(`🎲  LUDO MULTIPLAYER SERVER IS LIVE!`);
     console.log(`👉  HTTP Port: ${PORT}`);
@@ -802,7 +802,7 @@ async function startServer() {
           console.warn(`Fallback port ${port} unavailable (${err.code}), skipping.`);
         });
         io.attach(backupServer);
-        backupServer.listen(port, () => {
+        backupServer.listen(port, '0.0.0.0', () => {
           console.log(`👉  Cloud HTTP fallback listening on port ${port}`);
         });
       } catch (err) {
