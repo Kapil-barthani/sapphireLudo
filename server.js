@@ -743,29 +743,32 @@ io.on('connection', (socket) => {
 async function startServer() {
   const localIp = getLocalNetworkIp();
 
-  // Generate self-signed certificate for local HTTPS so mobile browsers (Chrome Android / iOS Safari)
-  // allow microphone access in secure context (https://)
-  try {
-    const pems = await selfsigned.generate([
-      { name: 'commonName', value: 'LudoKingdom' },
-      { name: 'organizationName', value: 'LudoKingdom' }
-    ], { days: 365 });
+  // In cloud environments (Railway, Render, etc.), the cloud proxy already provides valid HTTPS (SSL).
+  // Only run local self-signed HTTPS server when testing on local WiFi/LAN.
+  const isCloudEnv = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.PORT && process.env.NODE_ENV === 'production');
+  if (!isCloudEnv) {
+    try {
+      const pems = await selfsigned.generate([
+        { name: 'commonName', value: 'LudoKingdom' },
+        { name: 'organizationName', value: 'LudoKingdom' }
+      ], { days: 365 });
 
-    const httpsServer = https.createServer({
-      key: pems.private,
-      cert: pems.cert
-    }, app);
+      const httpsServer = https.createServer({
+        key: pems.private,
+        cert: pems.cert
+      }, app);
 
-    io.attach(httpsServer);
+      io.attach(httpsServer);
 
-    httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-      console.log(`🔒  HTTPS Server (Voice Chat / Mic enabled for Mobile & LAN):`);
-      console.log(`    👉  Local machine:      https://localhost:${HTTPS_PORT}`);
-      console.log(`    👉  Mobile/LAN devices: https://${localIp}:${HTTPS_PORT}`);
-      console.log(`    ℹ️   (Open this on mobile & tap "Advanced -> Proceed" to allow Microphone)\n`);
-    });
-  } catch (err) {
-    console.warn('⚠️  Could not initialize HTTPS server:', err.message);
+      httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+        console.log(`🔒  HTTPS Server (Voice Chat / Mic enabled for Mobile & LAN):`);
+        console.log(`    👉  Local machine:      https://localhost:${HTTPS_PORT}`);
+        console.log(`    👉  Mobile/LAN devices: https://${localIp}:${HTTPS_PORT}`);
+        console.log(`    ℹ️   (Open this on mobile & tap "Advanced -> Proceed" to allow Microphone)\n`);
+      });
+    } catch (err) {
+      console.warn('⚠️  Could not initialize HTTPS server:', err.message);
+    }
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
