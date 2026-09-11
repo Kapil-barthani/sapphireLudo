@@ -13,7 +13,7 @@ const TRACK_COORDINATES = [
   [5, 6],   // 5
   [4, 6],   // 6
   [3, 6],   // 7
-  [2, 6],   // 8: Gold Ring (Top Safe Spot)
+  [2, 6],   // 8: Red Ring (Top Safe Spot)
   [1, 6],   // 9
   [0, 6],   // 10
   [0, 7],   // 11: Red "HOME" label
@@ -26,7 +26,7 @@ const TRACK_COORDINATES = [
   [6, 9],   // 18
   [6, 10],  // 19
   [6, 11],  // 20
-  [6, 12],  // 21: Red Ring (Right Safe Spot)
+  [6, 12],  // 21: Yellow Ring (Right Safe Spot)
   [6, 13],  // 22
   [6, 14],  // 23
   [7, 14],  // 24: Yellow "HOME" label
@@ -39,7 +39,7 @@ const TRACK_COORDINATES = [
   [9, 8],   // 31
   [10, 8],  // 32
   [11, 8],  // 33
-  [12, 8],  // 34: Gold Ring (Bottom Safe Spot)
+  [12, 8],  // 34: Blue Ring (Bottom Safe Spot)
   [13, 8],  // 35
   [14, 8],  // 36
   [14, 7],  // 37: Blue "HOME" label
@@ -52,7 +52,7 @@ const TRACK_COORDINATES = [
   [8, 5],   // 44
   [8, 4],   // 45
   [8, 3],   // 46
-  [8, 2],   // 47: Blue Ring (Left Safe Spot)
+  [8, 2],   // 47: Green Ring (Left Safe Spot)
   [8, 1],   // 48
   [8, 0],   // 49
   [7, 0],   // 50: Green "HOME" label
@@ -118,6 +118,11 @@ const SAFE_GLOBAL_CELLS = [0, 8, 13, 21, 26, 34, 39, 47];
 function getTokenCoordinate(color, tokenIndex, step) {
   if (step === -1) {
     return YARD_SLOTS[color][tokenIndex];
+  }
+  if (step === 50.5) {
+    // 52nd cell of the outer common track (corner cell between step 50 and start cell 0)
+    const globalCell = (START_OFFSETS[color] + 51) % 52;
+    return TRACK_COORDINATES[globalCell];
   }
   if (step >= 0 && step <= 50) {
     const globalCell = (START_OFFSETS[color] + step) % 52;

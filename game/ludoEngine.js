@@ -68,6 +68,10 @@ class LudoGame {
   }
 
   static getGlobalCell(color, step) {
+    if (step === 50.5) {
+      // 52nd cell of the outer common track (corner cell between step 50 and start cell 0)
+      return (START_OFFSETS[color] + 51) % 52;
+    }
     if (step < 0 || step > 50) return null;
     return (START_OFFSETS[color] + step) % 52;
   }
@@ -93,21 +97,23 @@ class LudoGame {
       this.consecutiveSixes = 0;
     }
 
-    // 3 consecutive sixes rule: forfeit roll and turn passes
+    // 3 consecutive sixes rule: forfeit 3rd six and turn passes to next player (single pass)
     if (this.consecutiveSixes === 3) {
       this.consecutiveSixes = 0;
+      this.turnPhase = 'NO_MOVE_WAIT';
+      this.validMoves = [];
       this.lastAction = {
         type: 'THREE_SIXES',
         color: this.currentTurnColor,
         roll,
         description: `${this.players[this.currentTurnColor].name} rolled three 6s! Turn forfeited.`
       };
-      this.passTurn();
       return {
         success: true,
         roll,
         consecutiveSixesPenalty: true,
         validMoves: [],
+        autoPass: true,
         nextTurn: this.currentTurnColor,
         phase: this.turnPhase
       };
@@ -159,9 +165,12 @@ class LudoGame {
     player.tokens.forEach((step, tokenIndex) => {
       if (step === -1) {
         if (roll === 6) valid.push(tokenIndex);
+      } else if (step === 50.5) {
+        // Token is on the corner cell (between step 50 and start cell 0)
+        valid.push(tokenIndex);
       } else if (step >= 0 && step < 56) {
         if (!player.hasCaptured && step <= 50 && (step + roll > 50)) {
-          // Token can loop around common track for another lap to seek a capture
+          // Token loops around common 52-cell track for another lap to seek a capture
           valid.push(tokenIndex);
         } else {
           const newStep = step + roll;
@@ -197,13 +206,29 @@ class LudoGame {
       newStep = 0;
       fromYard = true;
       stepPath = [0];
+    } else if (currentStep === 50.5) {
+      // Token was at the corner cell (between step 50 and start cell 0).
+      // Moving roll steps forward: 1 step lands on 0 (start cell), 2 on 1, 3 on 2, etc.
+      for (let s = 1; s <= roll; s++) {
+        stepPath.push(s - 1);
+      }
+      newStep = roll - 1;
     } else if (!player.hasCaptured && currentStep <= 50 && (currentStep + roll > 50)) {
       // Must capture an opponent token before entering home runway!
-      // Token laps around the common track (51 common cells: steps 0-50)
-      for (let s = currentStep + 1; s <= currentStep + roll; s++) {
-        stepPath.push(s > 50 ? (s - 51) : s);
+      // Common track has 52 cells: steps 0 to 50, then corner cell (50.5), then start cell (0), 1, 2...
+      for (let s = 1; s <= roll; s++) {
+        const pos = currentStep + s;
+        if (pos <= 50) {
+          stepPath.push(pos);
+        } else if (pos === 51) {
+          stepPath.push(50.5); // Corner cell
+        } else if (pos === 52) {
+          stepPath.push(0); // Start cell
+        } else {
+          stepPath.push(pos - 52); // Steps 1, 2, 3...
+        }
       }
-      newStep = (currentStep + roll) - 51;
+      newStep = stepPath[stepPath.length - 1];
     } else {
       for (let s = currentStep + 1; s <= currentStep + roll; s++) {
         stepPath.push(s);
@@ -217,8 +242,9 @@ class LudoGame {
 
     player.tokens[tokenIndex] = newStep;
 
-    // Check capture on common track (steps 0 to 50)
-    if (newStep >= 0 && newStep <= 50) {
+    // Check capture on common track (steps 0 to 50, and corner cell 50.5)
+    const isCommonTrack = (newStep >= 0 && newStep <= 50) || newStep === 50.5;
+    if (isCommonTrack) {
       const globalCell = LudoGame.getGlobalCell(movingPlayerColor, newStep);
       
       if (!LudoGame.isSafeCell(globalCell)) {
@@ -226,7 +252,8 @@ class LudoGame {
           if (oppColor === movingPlayerColor) continue;
           const opp = this.players[oppColor];
           opp.tokens.forEach((oppStep, oppTokenIdx) => {
-            if (oppStep >= 0 && oppStep <= 50) {
+            const oppIsCommon = (oppStep >= 0 && oppStep <= 50) || oppStep === 50.5;
+            if (oppIsCommon) {
               const oppGlobal = LudoGame.getGlobalCell(oppColor, oppStep);
               if (oppGlobal === globalCell) {
                 opp.tokens[oppTokenIdx] = -1;
@@ -359,24 +386,34 @@ class LudoGame {
       if (curStep === -1) {
         score += 90;
       } else {
-        const nextStep = curStep + roll;
+        let nextStep = curStep + roll;
+        if (curStep === 50.5) {
+          nextStep = roll - 1;
+        } else if (!player.hasCaptured && curStep <= 50 && (curStep + roll > 50)) {
+          const pos = curStep + roll;
+          if (pos === 51) nextStep = 50.5;
+          else if (pos === 52) nextStep = 0;
+          else nextStep = pos - 52;
+        }
 
         if (nextStep === 56) {
           score += 180;
         }
 
-        if (nextStep >= 51 && curStep < 51) {
+        if (nextStep >= 51 && nextStep <= 55 && curStep < 51 && curStep !== 50.5) {
           score += 80;
         }
 
-        if (nextStep <= 50) {
+        const isCommonTrack = (nextStep >= 0 && nextStep <= 50) || nextStep === 50.5;
+        if (isCommonTrack) {
           const targetGlobal = LudoGame.getGlobalCell(color, nextStep);
           if (!LudoGame.isSafeCell(targetGlobal)) {
             for (const oppColor of this.activeColors) {
               if (oppColor === color) continue;
               const opp = this.players[oppColor];
               for (const oppStep of opp.tokens) {
-                if (oppStep >= 0 && oppStep <= 50) {
+                const oppIsCommon = (oppStep >= 0 && oppStep <= 50) || oppStep === 50.5;
+                if (oppIsCommon) {
                   if (LudoGame.getGlobalCell(oppColor, oppStep) === targetGlobal) {
                     score += 220;
                   }
@@ -388,7 +425,7 @@ class LudoGame {
           }
         }
 
-        score += Math.floor(nextStep * 1.5);
+        score += Math.floor((typeof nextStep === 'number' ? nextStep : 0) * 1.5);
       }
 
       if (score > bestScore) {

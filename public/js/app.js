@@ -75,6 +75,7 @@
         const tokenEl = tokenEls[color]?.[i];
         if (tokenEl) {
           const [row, col] = LudoCoords.YARD_SLOTS[color][i];
+          tokenEl.style.setProperty('--token-scale', '1');
           tokenEl.style.left = `${(col + 0.5) * cellSize}px`;
           tokenEl.style.top = `${(row + 0.5) * cellSize}px`;
         }
@@ -138,7 +139,11 @@
         <div class="yard-slot" data-color="green" data-slot="2"></div><div class="yard-slot" data-color="green" data-slot="3"></div>
       </div>
     `;
-    greenYard.addEventListener('click', () => onYardClick('green'));
+    greenYard.addEventListener('click', (e) => {
+      const slotEl = e.target.closest('.yard-slot');
+      const slotIdx = slotEl ? parseInt(slotEl.dataset.slot, 10) : null;
+      onYardClick('green', slotIdx);
+    });
     boardEl.appendChild(greenYard);
 
     // 2. Red Yard (Top Right)
@@ -151,7 +156,11 @@
         <div class="yard-slot" data-color="red" data-slot="2"></div><div class="yard-slot" data-color="red" data-slot="3"></div>
       </div>
     `;
-    redYard.addEventListener('click', () => onYardClick('red'));
+    redYard.addEventListener('click', (e) => {
+      const slotEl = e.target.closest('.yard-slot');
+      const slotIdx = slotEl ? parseInt(slotEl.dataset.slot, 10) : null;
+      onYardClick('red', slotIdx);
+    });
     boardEl.appendChild(redYard);
 
     // 3. Blue Yard (Bottom Left)
@@ -164,7 +173,11 @@
         <div class="yard-slot" data-color="blue" data-slot="2"></div><div class="yard-slot" data-color="blue" data-slot="3"></div>
       </div>
     `;
-    blueYard.addEventListener('click', () => onYardClick('blue'));
+    blueYard.addEventListener('click', (e) => {
+      const slotEl = e.target.closest('.yard-slot');
+      const slotIdx = slotEl ? parseInt(slotEl.dataset.slot, 10) : null;
+      onYardClick('blue', slotIdx);
+    });
     boardEl.appendChild(blueYard);
 
     // 4. Yellow Yard (Bottom Right)
@@ -177,7 +190,11 @@
         <div class="yard-slot" data-color="yellow" data-slot="2"></div><div class="yard-slot" data-color="yellow" data-slot="3"></div>
       </div>
     `;
-    yellowYard.addEventListener('click', () => onYardClick('yellow'));
+    yellowYard.addEventListener('click', (e) => {
+      const slotEl = e.target.closest('.yard-slot');
+      const slotIdx = slotEl ? parseInt(slotEl.dataset.slot, 10) : null;
+      onYardClick('yellow', slotIdx);
+    });
     boardEl.appendChild(yellowYard);
 
     // 5. Center 3x3 Home Triangle Convergence (Exact SVG 4-color convergence)
@@ -187,20 +204,20 @@
       <svg viewBox="0 0 120 120" style="position: absolute; top: 0; left: 0; width: 120px; height: 120px; display: block;">
         <defs>
           <linearGradient id="grad-green" x1="0%" y1="50%" x2="100%" y2="50%">
-            <stop offset="0%" stop-color="#22B96B"/>
-            <stop offset="100%" stop-color="#199353"/>
+            <stop offset="0%" stop-color="#15a852"/>
+            <stop offset="100%" stop-color="#0a6b33"/>
           </linearGradient>
           <linearGradient id="grad-red" x1="50%" y1="0%" x2="50%" y2="100%">
-            <stop offset="0%" stop-color="#E8384F"/>
-            <stop offset="100%" stop-color="#BA2135"/>
+            <stop offset="0%" stop-color="#dc2626"/>
+            <stop offset="100%" stop-color="#990c1c"/>
           </linearGradient>
           <linearGradient id="grad-yellow" x1="100%" y1="50%" x2="0%" y2="50%">
-            <stop offset="0%" stop-color="#F5B930"/>
-            <stop offset="100%" stop-color="#C98F12"/>
+            <stop offset="0%" stop-color="#f59e0b"/>
+            <stop offset="100%" stop-color="#b45309"/>
           </linearGradient>
           <linearGradient id="grad-blue" x1="50%" y1="100%" x2="50%" y2="0%">
-            <stop offset="0%" stop-color="#3A82F2"/>
-            <stop offset="100%" stop-color="#2464C9"/>
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="100%" stop-color="#173794"/>
           </linearGradient>
         </defs>
         <!-- Green Triangle (Left edge to center 60,60) -->
@@ -226,6 +243,8 @@
 
         const cell = document.createElement('div');
         cell.className = 'cell';
+        cell.dataset.r = r;
+        cell.dataset.c = c;
         cell.style.gridRow = r + 1;
         cell.style.gridColumn = c + 1;
 
@@ -246,11 +265,11 @@
         else if (r === 8 && c === 13) cell.classList.add('cell-start-yellow');
         else if (r === 13 && c === 6) cell.classList.add('cell-start-blue');
 
-        // Safe Rings (from screenshot)
-        if (r === 2 && c === 6) cell.classList.add('ring-safe', 'ring-gold');
-        else if (r === 6 && c === 12) cell.classList.add('ring-safe', 'ring-red');
-        else if (r === 12 && c === 8) cell.classList.add('ring-safe', 'ring-gold');
-        else if (r === 8 && c === 2) cell.classList.add('ring-safe', 'ring-blue');
+        // Safe Rings matching quadrant colors (Top: Red, Right: Yellow, Bottom: Blue, Left: Green)
+        if (r === 2 && c === 6) cell.classList.add('ring-safe', 'ring-red');
+        else if (r === 6 && c === 12) cell.classList.add('ring-safe', 'ring-yellow');
+        else if (r === 12 && c === 8) cell.classList.add('ring-safe', 'ring-blue');
+        else if (r === 8 && c === 2) cell.classList.add('ring-safe', 'ring-green');
 
         boardEl.appendChild(cell);
       }
@@ -282,12 +301,16 @@
         token.className = `token token-${color}`;
         token.dataset.color = color;
         token.dataset.index = i;
-        const handleSelect = (e) => {
+        token.style.touchAction = 'manipulation';
+        
+        token.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
           onTokenClick(color, i);
-        };
-        token.addEventListener('pointerdown', handleSelect);
-        token.addEventListener('click', handleSelect);
+        });
+        token.addEventListener('click', (e) => {
+          e.stopPropagation();
+          onTokenClick(color, i);
+        });
         tokenLayerEl.appendChild(token);
         tokenEls[color].push(token);
       }
@@ -327,22 +350,64 @@
         let top = (row + 0.5) * cellSize;
 
         let key = (step === -1) ? `${color}_yard_${tokenIdx}` : `cell_${row.toFixed(2)}_${col.toFixed(2)}`;
-        if (cellOccupancy[key] && cellOccupancy[key].length > 1) {
+        let tokenScale = 1;
+        let posIdx = 0;
+
+        if (step !== -1 && cellOccupancy[key] && cellOccupancy[key].length > 1) {
           const occList = cellOccupancy[key];
-          const posIdx = occList.findIndex(o => o.color === color && o.tokenIdx === tokenIdx);
-          const spread = cellSize * 0.22;
-          const offsets = [
-            [-spread, -spread],
-            [spread, -spread],
-            [-spread, spread],
-            [spread, spread]
-          ];
-          if (offsets[posIdx]) {
-            left += offsets[posIdx][0];
-            top += offsets[posIdx][1];
+          const count = occList.length;
+          posIdx = occList.findIndex(o => o.color === color && o.tokenIdx === tokenIdx);
+          if (posIdx < 0) posIdx = 0;
+
+          if (count === 2) {
+            tokenScale = 0.68;
+            const spread = cellSize * 0.18;
+            const offsets = [
+              [-spread, 0],
+              [spread, 0]
+            ];
+            if (offsets[posIdx]) {
+              left += offsets[posIdx][0];
+              top += offsets[posIdx][1];
+            }
+          } else if (count === 3) {
+            tokenScale = 0.58;
+            const spread = cellSize * 0.18;
+            // 3-point triangle layout inside the cell
+            const offsets = [
+              [0, -spread * 0.85],
+              [-spread, spread * 0.7],
+              [spread, spread * 0.7]
+            ];
+            if (offsets[posIdx]) {
+              left += offsets[posIdx][0];
+              top += offsets[posIdx][1];
+            }
+          } else if (count === 4) {
+            tokenScale = 0.52;
+            const spread = cellSize * 0.18;
+            // 4 corners cleanly separated
+            const offsets = [
+              [-spread, -spread],
+              [spread, -spread],
+              [-spread, spread],
+              [spread, spread]
+            ];
+            if (offsets[posIdx]) {
+              left += offsets[posIdx][0];
+              top += offsets[posIdx][1];
+            }
+          } else {
+            // 5 or more tokens (e.g. up to 8 on a stop/safe cell)
+            tokenScale = Math.max(0.44, 0.54 - count * 0.02);
+            const radius = cellSize * 0.20;
+            const angle = (2 * Math.PI / count) * posIdx - (Math.PI / 2);
+            left += Math.cos(angle) * radius;
+            top += Math.sin(angle) * radius;
           }
         }
 
+        tokenEl.style.setProperty('--token-scale', tokenScale);
         tokenEl.style.left = `${left}px`;
         tokenEl.style.top = `${top}px`;
 
@@ -350,10 +415,10 @@
         const canMoveThis = isMyTurn && gameState.turnPhase === 'MOVE' && gameState.currentTurnColor === color && gameState.validMoves.includes(tokenIdx);
         if (canMoveThis) {
           tokenEl.classList.add('can-move');
-          tokenEl.style.zIndex = '60';
+          tokenEl.style.zIndex = `${60 + posIdx}`;
         } else {
           tokenEl.classList.remove('can-move');
-          tokenEl.style.zIndex = '10';
+          tokenEl.style.zIndex = `${10 + posIdx}`;
         }
       });
     });
@@ -397,8 +462,7 @@
       window.ludoAudio.playCapture();
       spawnFloatingReaction('💥', playerColor);
     } else if (reachedHome) {
-      window.ludoAudio.playVictory();
-      spawnFloatingReaction('⭐', playerColor);
+      triggerGotiHomeCelebration(playerColor, tokenIndex);
     } else if (newStep >= 0 && newStep <= 51) {
       const global = (LudoCoords.START_OFFSETS[playerColor] + newStep) % 52;
       if (LudoCoords.SAFE_GLOBAL_CELLS.includes(global)) {
@@ -426,7 +490,7 @@
       singleMoveTimer = null;
     }
     const now = Date.now();
-    if (now - lastTokenClickTime < 160) return;
+    if (now - lastTokenClickTime < 240) return;
     lastTokenClickTime = now;
 
     if (isAnimatingMove || isRollingDice) return;
@@ -443,8 +507,8 @@
     });
   }
 
-  // Yard Click Handler: Allows tapping anywhere in the yard box or yard slot
-  function onYardClick(color) {
+  // Yard Click Handler: Allows tapping on a specific yard slot or the yard box
+  function onYardClick(color, slotIndex = null) {
     if (isAnimatingMove || isRollingDice) return;
     if (!gameState || gameState.turnPhase !== 'MOVE') return;
     const isMyTurn = (myRole === 'player') && (gameState.mode === 'pass_and_play' || myColor === gameState.currentTurnColor);
@@ -453,19 +517,30 @@
     const player = gameState.players[color];
     if (!player) return;
 
-    // Only move a yard token out if 6 was rolled and any token is still in yard!
-    const yardValidIdx = gameState.validMoves.find(idx => player.tokens[idx] === -1);
-    if (yardValidIdx !== undefined) {
-      onTokenClick(color, yardValidIdx);
+    // If user clicked a specific slot and that goti is valid to move, move THAT goti!
+    if (slotIndex !== null && slotIndex !== undefined && !isNaN(slotIndex)) {
+      if (gameState.validMoves.includes(slotIndex)) {
+        onTokenClick(color, slotIndex);
+        return;
+      }
+    }
+
+    // If user tapped generally on the yard container outside slots:
+    // Only auto-pick if strictly 1 token is movable from yard
+    const yardValidIdxs = gameState.validMoves.filter(idx => player.tokens[idx] === -1);
+    if (yardValidIdxs.length === 1) {
+      onTokenClick(color, yardValidIdxs[0]);
+    } else if (yardValidIdxs.length > 1) {
+      showStatusToast('Tap the specific goti you want to take out!', '👉', color);
     }
   }
 
   // Smart Board Click Resolver:
-  // When clicking on or near any movable token on the board (within 46px),
-  // accurately finds and moves THAT EXACT TOKEN without offset!
+  // When clicking on or near any movable token on the board,
+  // accurately finds and moves THAT EXACT TOKEN without picking the wrong token!
   boardEl?.addEventListener('click', (e) => {
-    // If the click directly hit a .token, token's own listener handles it
-    if (e.target.closest('.token')) return;
+    // If the click directly hit a .token or .yard, their own listeners handle it
+    if (e.target.closest('.token') || e.target.closest('.yard')) return;
     if (isAnimatingMove || isRollingDice) return;
     if (!gameState || gameState.turnPhase !== 'MOVE') return;
 
@@ -478,9 +553,12 @@
 
     const clickX = e.clientX;
     const clickY = e.clientY;
+    const boardWidth = boardEl.clientWidth || 500;
+    const cellSize = boardWidth / 15;
+    const maxClickDistance = Math.min(26, cellSize * 0.65);
 
     let closestTokenIdx = null;
-    let minDistance = 46;
+    let minDistance = maxClickDistance;
 
     validMoves.forEach(tokenIdx => {
       const tokenEl = tokenEls[currentColor]?.[tokenIdx];
@@ -500,31 +578,28 @@
     }
   });
 
-  // Auto-move for single valid choices (e.g. 6 rolled with tokens in yard, or only 1 movable token)
+  // Auto-move for single valid choices (ONLY when autoMoveEnabled is on and exactly 1 move exists)
   function checkSingleChoiceAutoExit() {
     if (singleMoveTimer) clearTimeout(singleMoveTimer);
     if (!gameState || isAnimatingMove || isRollingDice) return;
     if (gameState.turnPhase !== 'MOVE') return;
+
+    // Do NOT auto-move if autoMove is turned off by user
+    if (!autoMoveEnabled) return;
 
     const isMyTurn = (myRole === 'player') && (gameState.mode === 'pass_and_play' || myColor === gameState.currentTurnColor);
     if (!isMyTurn) return;
 
     const currentColor = gameState.currentTurnColor;
     const player = gameState.players[currentColor];
-    if (!player || !gameState.validMoves || gameState.validMoves.length === 0) return;
+    if (!player || !gameState.validMoves || gameState.validMoves.length !== 1) return;
 
-    // If all movable tokens are in the yard (step -1, standard 6 roll exit) or only 1 valid move exists
-    const allMovableInYard = gameState.validMoves.every(idx => player.tokens[idx] === -1);
-    const isSingleChoice = (gameState.validMoves.length === 1) || allMovableInYard;
-
-    if (isSingleChoice) {
-      const chosenTokenIdx = gameState.validMoves[0];
-      singleMoveTimer = setTimeout(() => {
-        if (gameState && gameState.turnPhase === 'MOVE' && gameState.currentTurnColor === currentColor && !isAnimatingMove && !isRollingDice) {
-          onTokenClick(currentColor, chosenTokenIdx);
-        }
-      }, 550);
-    }
+    const chosenTokenIdx = gameState.validMoves[0];
+    singleMoveTimer = setTimeout(() => {
+      if (gameState && gameState.turnPhase === 'MOVE' && gameState.currentTurnColor === currentColor && !isAnimatingMove && !isRollingDice) {
+        onTokenClick(currentColor, chosenTokenIdx);
+      }
+    }, 600);
   }
 
   // 3D Dice Roll Animation
@@ -566,16 +641,17 @@
       return;
     }
 
-    // If player taps dice during MOVE phase, execute their valid move!
+    // If player taps dice during MOVE phase, execute valid move ONLY if strictly 1 choice exists!
     if (gameState.turnPhase === 'MOVE') {
       const isMyTurn = (myRole === 'player') && (gameState.mode === 'pass_and_play' || myColor === gameState.currentTurnColor);
       if (isMyTurn && gameState.validMoves && gameState.validMoves.length > 0) {
-        const currentColor = gameState.currentTurnColor;
-        const player = gameState.players[currentColor];
-        const yardToken = gameState.validMoves.find(idx => player?.tokens[idx] === -1);
-        const chosenIdx = (yardToken !== undefined) ? yardToken : gameState.validMoves[0];
-        onTokenClick(currentColor, chosenIdx);
-        return;
+        if (gameState.validMoves.length === 1) {
+          onTokenClick(gameState.currentTurnColor, gameState.validMoves[0]);
+          return;
+        } else {
+          showStatusToast('Multiple gotis can move! Tap the goti you want to move.', '👉', gameState.currentTurnColor);
+          return;
+        }
       }
     }
 
@@ -604,6 +680,103 @@
         const tokenIdx = gameState.validMoves[0];
         onTokenClick(gameState.currentTurnColor, tokenIdx);
       }, 500);
+    }
+  }
+
+  // Set of player colors already celebrated for reaching 1st/2nd/3rd during the match
+  const celebratedWinners = new Set();
+
+  // In-Game Live Winner Celebration
+  function celebratePlayerWin(color, rank, playerName) {
+    const trophyEmoji = rank === 1 ? '🏆' : rank === 2 ? '🥈' : '🥉';
+    const rankTitle = rank === 1 ? '1st PLACE VICTORY!' : rank === 2 ? '2nd PLACE RUNNER-UP!' : '3rd PLACE WINNER!';
+    const medalName = rank === 1 ? 'Gold Trophy 🏆' : rank === 2 ? 'Silver Trophy 🥈' : 'Bronze Trophy 🥉';
+
+    // 1. Audio Fanfare
+    window.ludoAudio.playVictory();
+
+    // 2. Confetti Particle Shower
+    startConfetti();
+
+    // 3. Status Toast Ribbon
+    showStatusToast(`🎉 ${playerName} secured ${rankTitle} (${medalName})!`, trophyEmoji, color);
+
+    // 4. Large in-game Celebration Popup Banner over board
+    const boardWrapper = document.getElementById('board-wrapper');
+    if (boardWrapper) {
+      const banner = document.createElement('div');
+      banner.className = `live-winner-banner rank-${rank}`;
+      banner.innerHTML = `
+        <div class="live-winner-icon">${trophyEmoji}</div>
+        <div class="live-winner-title">${rankTitle}</div>
+        <div class="live-winner-name">🌟 ${playerName} (${color.toUpperCase()}) 🌟</div>
+        <div class="live-winner-sub">${medalName}</div>
+      `;
+      boardWrapper.appendChild(banner);
+      setTimeout(() => {
+        if (banner.parentNode) banner.parentNode.removeChild(banner);
+      }, 3600);
+    }
+  }
+
+  // Sparkle particle burst from board center (for Goti Home / Goti Laal)
+  function spawnCenterSparkles(color) {
+    const board = document.getElementById('ludo-board');
+    if (!board) return;
+    const boardWidth = board.clientWidth || 500;
+    const cx = boardWidth / 2;
+    const cy = boardWidth / 2;
+
+    const colors = ['#f59e0b', '#ffd700', '#ef4444', '#10b981', '#3b82f6', '#ffffff'];
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.className = 'sparkle-particle';
+      const angle = (Math.PI * 2 / 20) * i + (Math.random() * 0.25);
+      const dist = 35 + Math.random() * 65;
+      const dx = Math.cos(angle) * dist + 'px';
+      const dy = Math.sin(angle) * dist + 'px';
+      const size = 5 + Math.random() * 6;
+      p.style.setProperty('--dx', dx);
+      p.style.setProperty('--dy', dy);
+      p.style.left = `${cx}px`;
+      p.style.top = `${cy}px`;
+      p.style.width = `${size}px`;
+      p.style.height = `${size}px`;
+      p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      p.style.boxShadow = `0 0 10px ${p.style.backgroundColor}`;
+      board.appendChild(p);
+      setTimeout(() => {
+        if (p.parentNode) p.parentNode.removeChild(p);
+      }, 1250);
+    }
+  }
+
+  // Goti Home / Goti Laal Celebration
+  function triggerGotiHomeCelebration(playerColor, tokenIndex) {
+    window.ludoAudio.playVictory();
+    spawnFloatingReaction('⭐', playerColor);
+    spawnCenterSparkles(playerColor);
+
+    // Pulse center trophy
+    const trophy = document.querySelector('.center-trophy');
+    if (trophy) {
+      trophy.classList.remove('home-burst');
+      void trophy.offsetWidth;
+      trophy.classList.add('home-burst');
+      setTimeout(() => trophy.classList.remove('home-burst'), 1300);
+    }
+
+    // Floating celebration banner over center
+    const boardWrapper = document.getElementById('board-wrapper');
+    if (boardWrapper) {
+      const bubble = document.createElement('div');
+      bubble.className = 'goti-home-bubble';
+      const pName = gameState?.players?.[playerColor]?.name || playerColor.toUpperCase();
+      bubble.innerHTML = `🎯 ${pName} GOTI HOME! ⭐`;
+      boardWrapper.appendChild(bubble);
+      setTimeout(() => {
+        if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+      }, 2300);
     }
   }
 
@@ -672,6 +845,11 @@
     if (!state) return;
     gameState = state;
 
+    // Reset celebrated winners when lobby starts or winners list clears
+    if (!state.winners || state.winners.length === 0 || state.turnPhase === 'LOBBY') {
+      celebratedWinners.clear();
+    }
+
     const currentColor = state.currentTurnColor;
     const allColors = ['green', 'red', 'yellow', 'blue'];
 
@@ -698,9 +876,45 @@
         const nameEl = document.getElementById(`name-${c}`);
         const scoreEl = document.getElementById(`score-${c}`);
         if (nameEl) nameEl.textContent = p.hasLeft ? `${p.name} (Left)` : p.name;
+
+        // In-game winner rank (1st: Gold, 2nd: Silver, 3rd: Bronze)
+        const winnerIdx = (state.winners && state.winners.includes(c)) ? state.winners.indexOf(c) : -1;
+        const rank = winnerIdx >= 0 ? (winnerIdx + 1) : 0;
+
+        // Trigger celebratory fanfare & live banner when a player first wins 1st/2nd/3rd during game
+        if (rank >= 1 && rank <= 3 && !celebratedWinners.has(c)) {
+          celebratedWinners.add(c);
+          celebratePlayerWin(c, rank, p.name);
+        }
+
+        // Add or update trophy badge on player pod block
+        let rankBadge = podEl ? podEl.querySelector('.pod-rank-badge') : null;
+        if (rank >= 1 && rank <= 3) {
+          if (!rankBadge && podEl) {
+            rankBadge = document.createElement('div');
+            podEl.appendChild(rankBadge);
+          }
+          if (rankBadge) {
+            rankBadge.className = `pod-rank-badge rank-${rank}`;
+            const trophy = rank === 1 ? '🏆' : rank === 2 ? '🥈' : '🥉';
+            const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd';
+            rankBadge.innerHTML = `<span class="trophy-icon">${trophy}</span> <span class="rank-title">${rankLabel}</span>`;
+          }
+          podEl?.classList.remove('rank-1', 'rank-2', 'rank-3');
+          podEl?.classList.add('has-winner-rank', `rank-${rank}`);
+        } else {
+          if (rankBadge) rankBadge.remove();
+          podEl?.classList.remove('has-winner-rank', 'rank-1', 'rank-2', 'rank-3');
+        }
+
         if (scoreEl) {
           if (p.hasLeft) {
             scoreEl.textContent = 'Left Game';
+          } else if (rank >= 1 && rank <= 3) {
+            const trophy = rank === 1 ? '🏆' : rank === 2 ? '🥈' : '🥉';
+            const rankLabel = rank === 1 ? '1st Winner' : rank === 2 ? '2nd Winner' : '3rd Winner';
+            const rankColor = rank === 1 ? '#f59e0b' : rank === 2 ? '#cbd5e1' : '#d97706';
+            scoreEl.innerHTML = `<span style="color: ${rankColor}; font-weight: 700;">${trophy} ${rankLabel}</span>`;
           } else {
             const statusSuffix = p.hasCaptured ? '⚔️ Unlocked' : '🔒 Need Kill';
             scoreEl.textContent = `${p.finishedCount}/4 Home · ${statusSuffix}`;
@@ -756,7 +970,11 @@
         showStatusToast(`${activePlayerName} rolled a ${state.currentRoll}! Moving token...`, '🎲', currentColor);
       }
     } else if (state.turnPhase === 'NO_MOVE_WAIT') {
-      showStatusToast(`${activePlayerName} rolled a ${state.currentRoll} (no moves). Passing turn...`, '⚠️', currentColor);
+      if (state.lastAction && state.lastAction.type === 'THREE_SIXES') {
+        showStatusToast(`⚡ 3 Sixes in a row! 3rd six forfeited. Passing turn to next player...`, '⛔', currentColor);
+      } else {
+        showStatusToast(`${activePlayerName} rolled a ${state.currentRoll} (no moves). Passing turn...`, '⚠️', currentColor);
+      }
     }
 
     // Spectator banner
